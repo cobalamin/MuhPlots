@@ -1,0 +1,44 @@
+name: MuhPlots
+main: de.chipf0rk.MuhPlots.MuhPlots
+version: 0.0.1-SNAPSHOT
+depend:
+- WorldGuard
+- WorldEdit
+- Vault
+description: A plot manager that makes it possible for players and admins to protect and manage predefined WorldGuard plots in a simple way.
+commands:
+  mp:
+    description: The master command that does everything. Yay!
+    usage: §cWrong usage of the command! Type /plot help to get the full reference.
+    aliases:
+    - muhplot
+    - muhplots
+    - plot
+permissions:
+  muhplots.protect:
+    description: Allows a player to protect an ownerless plot.
+    default: true
+  muhplots.clear:
+    description: Allows a player (most likely administrator) to clear an owned plot, as in, make it owner- and memberless.
+    default: false
+  muhplots.find:
+    description: Allows a player to let the plugin find a free plot and teleports them to it.
+    default: false
+  muhplots.free:
+    description: Allows a player to find out how many plots are (owner)free.
+  muhplots.unlimited:
+    description: Allows a player to bypass plot count limitation.
+    default: false
+  muhplots.setowner:
+    description: Allows a player to protect a plot for another player.
+    default: false
+  muhplots.*:
+    description: Gives all muhplots permissions
+    children:
+      muhplots.protect: true
+      muhplots.clear: true
+      muhplots.find: true
+      muhplots.free: true
+      muhplots.unlimited: true
+      muhplots.setowner: true
+    default: false

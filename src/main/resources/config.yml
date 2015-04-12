@@ -1,0 +1,22 @@
+# default muhplots configuration
+
+# the maximum plots a player can have without the .unlimited permission
+maxplotcount: 1
+
+# the maximum plot id which will be considered in a random plot search
+plotrange: 3600
+# the x/z dimensions of the plots
+plotsize: 59
+# the height of the walkway between the plots. used so that players can tp/find safely
+walkway_y: 12
+
+# the region name prefix of the plots
+plotprefix: muhplot_
+# all worlds in which muhplots will be active
+plotworlds:
+  - plotworld
+
+# should the plugin log regularly how many expired protections were removed?
+# this is probably only useful for debugging, but could also be left on for controlling if the protections are being removed correctly
+# the output frequency will be: once every 10 minutes. 
+logexpired: false

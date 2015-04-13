@@ -24,24 +24,31 @@ public class PlotActions {
 		this.plugin = plugin;
 	}
 
+	// Warning: the following actions are not checked for permissions at any time.
+	// Permission checking should be done by other classes using these methods.
 	public void protectPlot(ProtectedRegion plot, Player player) {
 		plot.setFlag(DefaultFlag.BUILD, null);
 
 		DefaultDomain owners = new DefaultDomain();
 		owners.addPlayer(player.getUniqueId());
 		plot.setOwners(owners);
+
 		setPlotSigns(plot, player);
 	}
 
 	public void clearPlot(ProtectedRegion plot, Player player) {
-		plot.setFlag(DefaultFlag.BUILD, State.ALLOW); // allow building to anyone if plot is ownerless
-		World world = player.getWorld();
+		if(plugin.getConfig().getBoolean("plots.unprotected_are_public")) {
+			// allow building to anyone
+			plot.setFlag(DefaultFlag.BUILD, State.ALLOW);
+		}
 
 		plot.setOwners(new DefaultDomain()); // sets the owners to empty
 		plot.setMembers(new DefaultDomain()); // sets the members to empty
 
-		resetPlotSigns(plot, world);
+		resetPlotSigns(plot, player.getWorld());
 	}
+	
+	// === private
 	
 	private void resetPlotSigns(ProtectedRegion plot, World world) {
 		List<Block> signs = getSignBlocksOfPlot(plot, world);
@@ -68,8 +75,7 @@ public class PlotActions {
 			if (type == Material.SIGN || type == Material.SIGN_POST) {
 				Sign currentSign = (Sign) sign.getState();
 				currentSign.setLine(0, "---------------");
-				currentSign.setLine(1,
-						"Plot ID: " + ChatColor.BLUE + plugin.plotHelpers.getNumber(plot.getId()));
+				currentSign.setLine(1, "Plot ID: " + ChatColor.BLUE + plugin.helpers.getNumber(plot.getId()));
 				currentSign.setLine(2, ChatColor.WHITE + player.getName());
 				currentSign.setLine(3, "---------------");
 				currentSign.update();
@@ -83,8 +89,8 @@ public class PlotActions {
 				min.getBlockX() - 1.0, 0.0, min.getBlockZ() - 1.0);
 		List<Block> blocks = new ArrayList<Block>(4);
 		
-		int size = plugin.getConfig().getInt("plotsize") + 1; // signs are 1 block outside of the plot
-		int walkway_y = plugin.getConfig().getInt("walkway_y");
+		int size = plugin.getConfig().getInt("plots.size") + 1; // signs are 1 block outside of the plot
+		int walkway_y = plugin.getConfig().getInt("plots.walkway_y");
 
 		blocks.add(world.getBlockAt(
 				minPoint.getBlockX(),

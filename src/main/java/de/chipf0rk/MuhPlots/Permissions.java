@@ -1,5 +1,7 @@
 package de.chipf0rk.MuhPlots;
 
+import org.bukkit.entity.Player;
+
 // A enum "of strings" to store available permissions
 enum Permissions {
 	PROTECT, SETOWNER, CLEAR, FIND, FREE, UNLIMITED;
@@ -13,5 +15,13 @@ enum Permissions {
 	@Override
 	public String toString() {
 		return full_perm;
+	}
+	
+	public boolean doesHave(Player player) {
+		return player.hasPermission(this.toString());
+	}
+	
+	public static Permissions getByName(String name) {
+		return valueOf(name.toUpperCase());
 	}
 }

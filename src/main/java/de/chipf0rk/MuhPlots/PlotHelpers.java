@@ -3,6 +3,14 @@ package de.chipf0rk.MuhPlots;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.bukkit.entity.Player;
+
+import com.sk89q.worldguard.LocalPlayer;
+import com.sk89q.worldguard.bukkit.WGBukkit;
+import com.sk89q.worldguard.protection.ApplicableRegionSet;
+import com.sk89q.worldguard.protection.managers.RegionManager;
+import com.sk89q.worldguard.protection.regions.ProtectedRegion;
+
 public class PlotHelpers {
 	private MuhPlots plugin;
 	private String plotPrefix;
@@ -10,7 +18,7 @@ public class PlotHelpers {
 	
 	public PlotHelpers(MuhPlots plugin) {
 		this.plugin = plugin;
-		this.plotPrefix = plugin.getConfig().getString("plotprefix");
+		this.plotPrefix = plugin.getConfig().getString("plots.prefix");
 	}
 	
 	public String getId(int num) {
@@ -24,5 +32,24 @@ public class PlotHelpers {
 		}
 
 		return -1;
+	}
+	
+	public boolean canProtectPlot(Player player) {
+		RegionManager regionManager = WGBukkit.getRegionManager(player.getWorld());
+		
+		int protectedRegions = regionManager.getRegionCountOfPlayer((LocalPlayer) player);
+		int maxPlotCount = plugin.getConfig().getInt("plots.max_per_player");
+		
+		return protectedRegions < maxPlotCount || Permissions.UNLIMITED.doesHave(player);
+	}
+	
+	public ProtectedRegion getCurrentPlot(Player player) {
+		RegionManager regionManager = WGBukkit.getRegionManager(player.getWorld());
+		ApplicableRegionSet applicapleRegions = regionManager.getApplicableRegions(player.getLocation());
+		return applicapleRegions.iterator().next();
+	}
+	
+	public boolean isPlot(ProtectedRegion region) {
+		return region.getId().startsWith(plotPrefix);
 	}
 }

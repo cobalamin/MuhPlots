@@ -100,7 +100,7 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 
 		// Execute the commands!
 		// NOTE: We use {} around each case block. This is intentional, to isolate the scope of the block for each case.
-		// If we didn't do this, duplicate variable names in two different cases could make for some trouble.
+		// If we didn't do this, duplicate variable names in two different cases could cause trouble.
 		switch(cmd) {
 		case "list": {
 			List<String> playersPlots = new ArrayList<String>();

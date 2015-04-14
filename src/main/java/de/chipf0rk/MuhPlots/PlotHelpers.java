@@ -3,6 +3,7 @@ package de.chipf0rk.MuhPlots;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang.StringUtils;
 import org.bukkit.entity.Player;
 
 import com.sk89q.worldguard.LocalPlayer;
@@ -11,14 +12,20 @@ import com.sk89q.worldguard.protection.ApplicableRegionSet;
 import com.sk89q.worldguard.protection.managers.RegionManager;
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 
+import de.chipf0rk.MuhPlots.exceptions.MuhInitException;
+
 public class PlotHelpers {
 	private MuhPlots plugin;
 	private String plotPrefix;
 	private Pattern numberExtractPattern = Pattern.compile("(\\d+)$");
 	
-	public PlotHelpers(MuhPlots plugin) {
+	public PlotHelpers(MuhPlots plugin) throws MuhInitException {
 		this.plugin = plugin;
 		this.plotPrefix = plugin.getConfig().getString("plots.prefix");
+		// check if plot prefix is blank or consists only of numbers, both of which are invalid
+		if(StringUtils.isBlank(plotPrefix) || plotPrefix.equals(String.valueOf(Double.parseDouble(plotPrefix)))) {
+			throw new MuhInitException("Invalid plot prefix in the configuration: " + plotPrefix);
+		}
 	}
 	
 	public String getId(int num) {

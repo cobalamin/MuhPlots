@@ -15,6 +15,8 @@ import com.sk89q.worldedit.CuboidClipboard;
 import com.sk89q.worldedit.data.DataException;
 import com.sk89q.worldedit.schematic.SchematicFormat;
 
+import de.chipf0rk.MuhPlots.exceptions.MuhInitException;
+
 public final class MuhPlots extends JavaPlugin {
 	// Helper instances
 	MessageSender msg;
@@ -62,8 +64,9 @@ public final class MuhPlots extends JavaPlugin {
 		plotFile = new File(getDataFolder(), "plot.schematic");
 		if(plotFile.exists()) {
 			try {
-				SchematicFormat.MCEDIT.load(plotFile);
+				this.plotSchematic = SchematicFormat.MCEDIT.load(plotFile);
 			} catch (DataException | IOException e) {
+				this.plotSchematic = null;
 				severe("An error occurred when loading the plot file!");
 			}
 		}
@@ -72,9 +75,14 @@ public final class MuhPlots extends JavaPlugin {
 		}
 		
 		// Create helper instances
-		this.msg = new MessageSender(this);
-		this.actions = new PlotActions(this);
-		this.helpers = new PlotHelpers(this);
+		try {
+			this.msg = new MessageSender(this);
+			this.actions = new PlotActions(this);
+			this.helpers = new PlotHelpers(this);
+		} catch(MuhInitException e) {
+			severe("Initialisation exception: " + e.getMessage());
+			return;
+		}
 		
 		// Set the command executor
 		// We do this last so that initialisation errors prevent any commands from being registered

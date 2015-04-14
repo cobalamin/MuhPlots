@@ -24,15 +24,22 @@ import com.sk89q.worldguard.protection.flags.DefaultFlag;
 import com.sk89q.worldguard.protection.flags.StateFlag.State;
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 
+import de.chipf0rk.MuhPlots.exceptions.MuhInitException;
+
 public class PlotActions {
 	private MuhPlots plugin;
 	private EditSessionFactory esf;
 	private int plotSize;
+	private int walkwayY;
 
-	public PlotActions(MuhPlots plugin) {
+	public PlotActions(MuhPlots plugin) throws MuhInitException {
 		this.plugin = plugin;
 		this.esf = new EditSessionFactory();
 		this.plotSize = plugin.getConfig().getInt("plots.size");
+		this.walkwayY = plugin.getConfig().getInt("plots.walkway_y");
+		
+		if(plotSize < 1) throw new MuhInitException("Config value plots.size has to be set and an integer larger than 0!");
+		if(walkwayY < 0) throw new MuhInitException("Config value plots.walkway_y has to be set and a positive integer!");
 	}
 
 	// Warning: the following actions are not checked for permissions at any time.
@@ -80,6 +87,15 @@ public class PlotActions {
 		return false;
 	}
 	
+	public void teleportToPlot(ProtectedRegion plot, Player player) {
+		BlockVector minPoint = plot.getMinimumPoint();
+		Location safeLoc = new Location(player.getWorld(),
+				minPoint.getX() - 0.5D, plugin.getConfig().getInt("walkway_y"),
+				minPoint.getZ() - 0.5D);
+
+		player.teleport(safeLoc);
+	}
+	
 	// === private
 	
 	private void resetPlotSigns(ProtectedRegion plot, World world) {
@@ -122,23 +138,22 @@ public class PlotActions {
 		List<Block> blocks = new ArrayList<Block>(4);
 		
 		int size = plugin.getConfig().getInt("plots.size") + 1; // signs are 1 block outside of the plot
-		int walkway_y = plugin.getConfig().getInt("plots.walkway_y");
 
 		blocks.add(world.getBlockAt(
 				minPoint.getBlockX(),
-				walkway_y,
+				walkwayY,
 				minPoint.getBlockZ()));
 		blocks.add(world.getBlockAt(
 				minPoint.getBlockX() + size,
-				walkway_y,
+				walkwayY,
 				minPoint.getBlockZ()));
 		blocks.add(world.getBlockAt(
 				minPoint.getBlockX(),
-				walkway_y,
+				walkwayY,
 				minPoint.getBlockZ() + size));
 		blocks.add(world.getBlockAt(
 				minPoint.getBlockX() + size,
-				walkway_y,
+				walkwayY,
 				minPoint.getBlockZ() + size));
 		
 		return blocks;

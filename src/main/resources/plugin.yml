@@ -15,30 +15,38 @@ commands:
       - muhplots
       - plot
 permissions:
-  muhplots.protect:
-    description: Allows a player to protect an ownerless plot.
+  mau5plots.protect:
+    description: "Allows a player to protect an ownerless plot."
     default: true
-  muhplots.clear:
-    description: Allows a player (most likely administrator) to clear an owned plot, as in, make it owner- and memberless.
+  mau5plots.clear:
+    description: "Allows a player (most likely administrator) to clear an owned plot, as in, make it owner- and memberless."
     default: false
-  muhplots.find:
-    description: Allows a player to let the plugin find a free plot and teleports them to it.
+  mau5plots.reset:
+    description: "Allows a player (most likely administrator) to reset an owned plot, that means resetting the terrain without touching the owners."
     default: false
-  muhplots.free:
-    description: Allows a player to find out how many plots are (owner)free.
-  muhplots.unlimited:
-    description: Allows a player to bypass plot count limitation.
+  mau5plots.delete:
+    description: "Allows a player (most likely administrator) to delete an owned plot, that means resetting the terrain and owners."
     default: false
-  muhplots.setowner:
-    description: Allows a player to protect a plot for another player.
+  mau5plots.find:
+    description: "Allows a player to let the plugin find a free plot and teleports them to it."
     default: false
-  muhplots.*:
-    description: Gives all muhplots permissions
+  mau5plots.unlimited:
+    description: "Allows a player to bypass plot count limitation."
+    default: false
+  mau5plots.setowner:
+    description: "Allows a player to protect a plot for another player."
+    default: false
+  mau5plots.*:
+    description: "Gives all mau5plots permissions"
     children:
-      muhplots.protect: true
-      muhplots.clear: true
-      muhplots.find: true
-      muhplots.free: true
-      muhplots.unlimited: true
-      muhplots.setowner: true
+      mau5plots.protect: true
+      mau5plots.clear: true
+      mau5plots.reset: true
+      mau5plots.delete: true
+      mau5plots.find: true
+      mau5plots.free: true
+      mau5plots.unlimited: true
+      mau5plots.setowner: true
+      mau5plots.request: true
+      mau5plots.accept: true
     default: false

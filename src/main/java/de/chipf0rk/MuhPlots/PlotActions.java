@@ -12,6 +12,13 @@ import org.bukkit.block.Sign;
 import org.bukkit.entity.Player;
 
 import com.sk89q.worldedit.BlockVector;
+import com.sk89q.worldedit.CuboidClipboard;
+import com.sk89q.worldedit.EditSession;
+import com.sk89q.worldedit.EditSessionFactory;
+import com.sk89q.worldedit.LocalPlayer;
+import com.sk89q.worldedit.LocalWorld;
+import com.sk89q.worldedit.MaxChangedBlocksException;
+import com.sk89q.worldedit.Vector;
 import com.sk89q.worldguard.domains.DefaultDomain;
 import com.sk89q.worldguard.protection.flags.DefaultFlag;
 import com.sk89q.worldguard.protection.flags.StateFlag.State;
@@ -19,9 +26,13 @@ import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 
 public class PlotActions {
 	private MuhPlots plugin;
+	private EditSessionFactory esf;
+	private int plotSize;
 
 	public PlotActions(MuhPlots plugin) {
 		this.plugin = plugin;
+		this.esf = new EditSessionFactory();
+		this.plotSize = plugin.getConfig().getInt("plots.size");
 	}
 
 	// Warning: the following actions are not checked for permissions at any time.
@@ -46,6 +57,27 @@ public class PlotActions {
 		plot.setMembers(new DefaultDomain()); // sets the members to empty
 
 		resetPlotSigns(plot, player.getWorld());
+	}
+
+	public boolean resetPlot(ProtectedRegion plot, Player player, CuboidClipboard plotSchematic) {
+		World world = player.getWorld();
+		if(plotSchematic != null) {
+			try {
+				int maxBlocks = plotSize * plotSize * world.getMaxHeight();
+				Vector minPoint = plot.getMinimumPoint();
+
+				EditSession es = esf.getEditSession((LocalWorld) world, maxBlocks, (LocalPlayer) player);
+				plotSchematic.place(es, minPoint, false);
+				
+				resetPlotSigns(plot, world);
+			} catch (MaxChangedBlocksException ex) {
+				plugin.severe("MaxChangedBlocksException occurred while trying to reset a plot.");
+				return false;
+			}
+		}
+
+		plugin.warn("Plots can't be reset without a plot schematic file");
+		return false;
 	}
 	
 	// === private

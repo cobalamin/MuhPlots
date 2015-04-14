@@ -1,7 +1,9 @@
 package de.chipf0rk.MuhPlots;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 
 import org.bukkit.World;
 import org.bukkit.command.Command;
@@ -9,7 +11,9 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import com.sk89q.worldguard.LocalPlayer;
 import com.sk89q.worldguard.bukkit.WGBukkit;
+import com.sk89q.worldguard.protection.managers.RegionManager;
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 
 import de.chipf0rk.MuhPlots.MessageSender.State;
@@ -21,10 +25,11 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 	private PlotActions actions;
 	
 	// This is a list of commands that operate on the plot where a player is standing
-	// We use this list to quickly determine outside of these commands
+	// We use this list to DRY-style determine if the commands can be executed given the players' position
 	private final List<String> cmdsOperatingOnCurrentPlot = Arrays.asList(
 		"protect",
-		"clear"
+		"clear",
+		"info"
 	);
 	
 	MuhPlotsCommandExecutor(MuhPlots plugin) {
@@ -55,6 +60,7 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 		// === Commands
 		Player player = (Player) sender;
 		World world = player.getWorld();
+		RegionManager regionManager = WGBukkit.getRegionManager(world);
 		ProtectedRegion plot = helpers.getCurrentPlot(player);
 		
 		String cmd = arguments[0].toLowerCase();
@@ -84,7 +90,7 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 				return true;
 			}
 			if(!helpers.isPlot(plot)) {
-				msg.send(player,State.FAILURE, "Sorry, the region you're in doesn't seem to be a plot region!");
+				msg.send(player,State.FAILURE, "The region you're in doesn't seem to be a plot region.");
 				return true;
 			}
 		}
@@ -105,9 +111,35 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 				actions.protectPlot(plot, player);
 				msg.send(player, State.SUCCESS, "You've successfully protected plot #" + helpers.getNumber(plot.getId()) + "!");
 			}
-
+			
 			return true;
-
+			
+		case "list":
+			List<String> plotIds = new ArrayList<String>();
+			for(ProtectedRegion region : regionManager.getRegions().values()) {
+				if(region.isOwner((LocalPlayer) player)) {
+					plotIds.add("#" + helpers.getNumber(region.getId()));
+				}
+			}
+			
+			if(plotIds.size() > 0) msg.send(player, State.NOTICE, "You own the following plots: " + String.join(", ", plotIds));
+			else msg.send(player, State.NOTICE, "You don't own any plots in this world yet.");
+			
+			return true;
+			
+		case "info":
+			String plotId = "#" + helpers.getNumber(plot.getId());
+			Set<String> owners = plot.getOwners().getPlayers();
+			Set<String> members = plot.getMembers().getPlayers();
+			
+			msg.send(player, State.NOTICE, "Plot ID: " + plotId);
+			msg.send(player, State.NOTICE, owners.size() > 0 ?
+					"Owners: " + String.join(", ", owners) :
+					"This plot has no owner.");
+			msg.send(player, State.NOTICE, members.size() > 0 ?
+					"Members: " + String.join(", ", members) :
+					"This plot has no members.");
+			
 		case "clear":
 			actions.clearPlot(plot, player);
 			msg.send(player, State.SUCCESS, "You've cleared plot #" + helpers.getNumber(plot.getId()) + ".");

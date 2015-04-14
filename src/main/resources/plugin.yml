@@ -1,19 +1,19 @@
+---
 name: MuhPlots
 main: de.chipf0rk.MuhPlots.MuhPlots
 version: 0.0.1-SNAPSHOT
 depend:
-- WorldGuard
-- WorldEdit
-- Vault
+  - WorldGuard
+  - WorldEdit
 description: A plot manager that makes it possible for players and admins to protect and manage predefined WorldGuard plots in a simple way.
 commands:
   mp:
     description: The master command that does everything. Yay!
     usage: §cWrong usage of the command! Type /plot help to get the full reference.
     aliases:
-    - muhplot
-    - muhplots
-    - plot
+      - muhplot
+      - muhplots
+      - plot
 permissions:
   muhplots.protect:
     description: Allows a player to protect an ownerless plot.

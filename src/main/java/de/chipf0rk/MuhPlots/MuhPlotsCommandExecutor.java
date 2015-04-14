@@ -27,10 +27,10 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 	// This is a list of commands that operate on the plot where a player is standing
 	// We use this list to DRY-style determine if the commands can be executed given the players' position
 	private final List<String> cmdsOperatingOnCurrentPlot = Arrays.asList(
-			"protect",
-			"info",
-			"clear", "reset", "delete"
-			);
+		"protect",
+		"info",
+		"clear", "reset", "delete"
+	);
 
 	MuhPlotsCommandExecutor(MuhPlots plugin) {
 		this.plugin = plugin;
@@ -173,6 +173,10 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 			else msg.send(player, State.FAILURE, "Sorry, couldn't reset the plot. Check the logs.");
 			
 			return true;
+		}
+		
+		case "setowner": {
+			
 		}
 
 		default:

@@ -2,6 +2,7 @@ package de.chipf0rk.MuhPlots;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -44,6 +45,15 @@ public class PlotActions {
 
 	// Warning: the following actions are not checked for permissions at any time.
 	// Permission checking should be done by other classes using these methods.
+	public boolean protectPlot(ProtectedRegion plot, Player issuer, String playerName) {
+		plot.setFlag(DefaultFlag.BUILD, null);
+		
+		DefaultDomain owners = new DefaultDomain();
+		owners.addPlayer(playerName);
+		plot.setOwners(owners);
+		
+		return false;
+	}
 	public void protectPlot(ProtectedRegion plot, Player player) {
 		plot.setFlag(DefaultFlag.BUILD, null);
 
@@ -114,8 +124,7 @@ public class PlotActions {
 		}
 	}
 
-	private void setPlotSigns(ProtectedRegion plot, Player player) {
-		World world = player.getWorld();
+	private void setPlotSigns(ProtectedRegion plot, World world, String ownerName) {
 		List<Block> signs = getSignBlocksOfPlot(plot, world);
 		
 		for (Block sign : signs) {
@@ -124,11 +133,14 @@ public class PlotActions {
 				Sign currentSign = (Sign) sign.getState();
 				currentSign.setLine(0, "---------------");
 				currentSign.setLine(1, "Plot ID: " + ChatColor.BLUE + plugin.helpers.getNumber(plot.getId()));
-				currentSign.setLine(2, ChatColor.WHITE + player.getName());
+				currentSign.setLine(2, ChatColor.WHITE + ownerName);
 				currentSign.setLine(3, "---------------");
 				currentSign.update();
 			}
 		}
+	}
+	private void setPlotSigns(ProtectedRegion plot, Player player) {
+		setPlotSigns(plot, player.getWorld(), player.getName());
 	}
 	
 	private List<Block> getSignBlocksOfPlot(ProtectedRegion plot, World world) {

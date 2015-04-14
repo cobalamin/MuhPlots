@@ -36,15 +36,23 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 		return issuer.getServer().getPlayer(name);
 	}
 	
-	public boolean onCommand(CommandSender sender, Command c, String label, String[] args) {
+	public boolean onCommand(CommandSender sender, Command c, String label, String[] arguments) {
 		if (!(sender instanceof Player)) {
 			msg.send(sender, State.FAILURE, "This command can't be used from the console.");
 			return true;
 		}
 		
-		String cmd = args[0];
+		// === Help
+		if(arguments.length == 0 || "help".equalsIgnoreCase(arguments[0])) {
+			msg.sendHelpTo(sender);
+			return true;
+		}
+		
+		// === Commands
 		Player player = (Player) sender;
 		ProtectedRegion plot = helpers.getCurrentPlot(player);
+		String cmd = arguments[0].toLowerCase();
+		List<String> args = Arrays.asList(arguments).subList(1, arguments.length);
 		
 		// check if player has permission to use this command
 		if(!checkPermission(player, cmd)) {
@@ -64,31 +72,33 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 			}
 		}
 		
-		// get actual plot command
-		switch(cmd.toLowerCase()) {
+		// execute command
+		switch(cmd) {
 		case "protect":
-			if(helpers.canProtectPlot(player)) {
-				if(plot.hasMembersOrOwners()) {
-					msg.send(player, State.FAILURE, "Sorry, this plot is already protected by someone.");
-					return true;
-				}
-				
-				else {
-					actions.protectPlot(plot, player);
-					msg.send(player, State.SUCCESS, "You've successfully protected plot #" + helpers.getNumber(plot.getId()) + "!");
-				}
-			}
-			else {
+			if(!helpers.canProtectPlot(player)) {
 				msg.send(player, State.FAILURE, "Sorry, you can't protect any more plots.");
+				return true;
+			}
+			if(plot.hasMembersOrOwners()) {
+				msg.send(player, State.FAILURE, "Sorry, this plot is already protected by someone.");
+				return true;
+			}
+			
+			else {
+				actions.protectPlot(plot, player);
+				msg.send(player, State.SUCCESS, "You've successfully protected plot #" + helpers.getNumber(plot.getId()) + "!");
 			}
 
 			return true;
+
 		case "clear":
 			actions.clearPlot(plot, player);
 			return true;
+			
+		default:
+			msg.send(player, State.FAILURE, "Unknown command. Use /mp help to get a list of all commands.");
+			return true;
 		}
-		
-		return false;
 	}
 	
 	private boolean checkPermission(Player player, String cmd) {

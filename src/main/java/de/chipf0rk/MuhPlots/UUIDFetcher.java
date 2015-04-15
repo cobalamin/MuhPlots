@@ -9,10 +9,8 @@ import com.mojang.api.profiles.Profile;
 
 public class UUIDFetcher {
 	private HttpProfileRepository pr;
-	private MuhPlots plugin;
 	
-	public UUIDFetcher(MuhPlots plugin) {
-		this.plugin = plugin;
+	public UUIDFetcher() {
 		this.pr = new HttpProfileRepository("minecraft");
 	}
 	

@@ -176,7 +176,16 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 		}
 		
 		case "setowner": {
+			if(args.size() < 1) {
+				msg.send(player, State.FAILURE, "Please specify a player to protect this plot for.");
+				return true;
+			}
+			String playerName = args.get(0);
+			boolean couldSetOwner = actions.protectPlot(plot, player, playerName);
 			
+			if(couldSetOwner) msg.send(player, State.SUCCESS, "You've successfully protected plot " + plotId + " for " + playerName + "!");
+			else msg.send(player, State.FAILURE, "Something went wrong when trying to protect this plot. Double check the player name.");
+			return true;
 		}
 
 		default:

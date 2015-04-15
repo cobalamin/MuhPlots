@@ -48,11 +48,14 @@ public class PlotActions {
 	public boolean protectPlot(ProtectedRegion plot, Player issuer, String playerName) {
 		plot.setFlag(DefaultFlag.BUILD, null);
 		
+		UUID playerUUID = plugin.uuidFetcher.getUUIDs(playerName).get(playerName);
+		if(playerUUID == null) return false;
+		
 		DefaultDomain owners = new DefaultDomain();
-		owners.addPlayer(playerName);
+		owners.addPlayer(playerUUID);
 		plot.setOwners(owners);
 		
-		return false;
+		return true;
 	}
 	public void protectPlot(ProtectedRegion plot, Player player) {
 		plot.setFlag(DefaultFlag.BUILD, null);

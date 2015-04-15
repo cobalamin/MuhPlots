@@ -22,6 +22,7 @@ public final class MuhPlots extends JavaPlugin {
 	MessageSender msg;
 	PlotActions actions;
 	PlotHelpers helpers;
+	UUIDFetcher uuidFetcher;
 
 	// DB
 	Database db;
@@ -79,6 +80,7 @@ public final class MuhPlots extends JavaPlugin {
 			this.msg = new MessageSender(this);
 			this.actions = new PlotActions(this);
 			this.helpers = new PlotHelpers(this);
+			this.uuidFetcher = new UUIDFetcher();
 		} catch(MuhInitException e) {
 			severe("Initialisation exception: " + e.getMessage());
 			return;

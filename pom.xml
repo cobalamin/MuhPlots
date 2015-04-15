@@ -66,5 +66,11 @@
 			<artifactId>SQLibrary</artifactId>
 			<version>7.1</version>
 		</dependency>
+		
+		<dependency>
+			<groupId>com.sk89q.lib.mojang</groupId>
+			<artifactId>AccountsClient</artifactId>
+			<version>1.0.0</version>
+		</dependency>
 	</dependencies>
 </project>

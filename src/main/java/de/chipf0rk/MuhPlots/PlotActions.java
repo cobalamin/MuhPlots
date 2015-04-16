@@ -103,8 +103,8 @@ public class PlotActions {
 	public void teleportToPlot(ProtectedRegion plot, Player player) {
 		BlockVector minPoint = plot.getMinimumPoint();
 		Location safeLoc = new Location(player.getWorld(),
-				minPoint.getX() - 0.5D, plugin.getConfig().getInt("walkway_y"),
-				minPoint.getZ() - 0.5D);
+			minPoint.getX() - 0.5D, this.walkwayY,
+			minPoint.getZ() - 0.5D);
 
 		player.teleport(safeLoc);
 	}

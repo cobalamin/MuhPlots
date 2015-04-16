@@ -126,12 +126,10 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 				return true;
 			}
 
-			else {
-				actions.protectPlot(plot, player);
-				msg.send(player, State.SUCCESS, "You've successfully protected plot #" + helpers.getNumber(plot.getId()) + "!");
-			}
+			actions.protectPlot(plot, player);
+			msg.send(player, State.SUCCESS, "You've successfully protected plot #" + helpers.getNumber(plot.getId()) + "!");
 			
-			return true;
+			break;
 		}
 
 		case "info": {
@@ -145,23 +143,20 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 			msg.send(player, State.NOTICE, members.size() > 0 ?
 					"Members: " + String.join(", ", members) :
 					"This plot has no members.");
-			
-			return true;
+			break;
 		}
 
 		case "clear": {
 			actions.clearPlot(plot, player);
 			msg.send(player, State.SUCCESS, "You've successfully cleared plot " + plotId + "!");
-			
-			return true;
+			break;
 		}
 
 		case "reset": {
 			boolean couldReset = actions.resetPlot(plot, player, plugin.plotSchematic);
 			if(couldReset) msg.send(player, State.SUCCESS, "You've successfully reset plot " + plotId + "!");
 			else msg.send(player, State.FAILURE, "Sorry, couldn't reset the plot. Check the logs.");
-			
-			return true;
+			break;
 		}
 
 		case "delete": {
@@ -171,8 +166,7 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 				msg.send(player, State.SUCCESS, "You've successfully deleted plot " + plotId + "!");
 			}
 			else msg.send(player, State.FAILURE, "Sorry, couldn't reset the plot. Check the logs.");
-			
-			return true;
+			break;
 		}
 		
 		case "setowner": {
@@ -187,11 +181,29 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 			else msg.send(player, State.FAILURE, "Something went wrong when trying to protect this plot. Double check the player name.");
 			return true;
 		}
-
-		default:
-			msg.send(player, State.FAILURE, "Unknown command. Use /mp help to get a list of all commands.");
-			return true;
+		
+		case "tp": {
+			if(args.size() < 1) {
+				msg.send(player, State.FAILURE, "Please specify a plot to teleport to.");
+				return true;
+			}
+			// parse for number, then return full id string
+			String id = args.get(0);
+			String tpPlotId = helpers.getId(helpers.getNumber(id));
+			ProtectedRegion tpPlot = regionManager.getRegion(tpPlotId);
+			
+			if(tpPlot == null) msg.send(player, State.FAILURE, "Couldn't find a plot with ID " + id);
+			else {
+				actions.teleportToPlot(tpPlot, player);
+				msg.send(player, State.SUCCESS, "You've been teleported.");
+			}
+			break;
 		}
+
+		default: msg.send(player, State.FAILURE, "Unknown command. Use /mp help to get a list of all commands.");
+		}
+		
+		return true;
 	}
 
 	private boolean checkPermission(Player player, String cmd) {

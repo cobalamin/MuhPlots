@@ -67,12 +67,11 @@ public final class MuhPlots extends JavaPlugin {
 			try {
 				this.plotSchematic = SchematicFormat.MCEDIT.load(plotFile);
 			} catch (DataException | IOException e) {
-				this.plotSchematic = null;
 				severe("An error occurred when loading the plot file!");
 			}
 		}
 		else {
-			warn("The plot file does not exist! Plot restoring commands will not work.");
+			warn("The plot file does not exist! Plot resetting commands will not work.");
 		}
 		
 		// Create helper instances

@@ -16,6 +16,7 @@ import com.sk89q.worldedit.data.DataException;
 import com.sk89q.worldedit.schematic.SchematicFormat;
 
 import de.chipf0rk.MuhPlots.exceptions.MuhInitException;
+import de.chipf0rk.MuhPlots.listeners.PlayerJoinLeaveListener;
 
 public final class MuhPlots extends JavaPlugin {
 	// Helper instances
@@ -26,6 +27,7 @@ public final class MuhPlots extends JavaPlugin {
 
 	// DB
 	Database db;
+	public Database getDB() { return this.db; }
 	
 	// Plot schematic
 	File plotFile;
@@ -84,6 +86,9 @@ public final class MuhPlots extends JavaPlugin {
 			severe("Initialisation exception: " + e.getMessage());
 			return;
 		}
+		
+		// Create Bukkit event listeners
+		new PlayerJoinLeaveListener(this);
 		
 		// Set the command executor
 		// We do this last so that initialisation errors prevent any commands from being registered

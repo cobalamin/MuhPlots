@@ -8,12 +8,14 @@ import java.util.logging.Level;
 import lib.PatPeter.SQLibrary.Database;
 import lib.PatPeter.SQLibrary.SQLite;
 
-import org.bukkit.ChatColor;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import com.sk89q.worldedit.CuboidClipboard;
 import com.sk89q.worldedit.data.DataException;
+import com.sk89q.worldedit.bukkit.WorldEditPlugin;
 import com.sk89q.worldedit.schematic.SchematicFormat;
+import com.sk89q.worldguard.bukkit.WGBukkit;
+import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
 
 import de.chipf0rk.MuhPlots.exceptions.MuhInitException;
 import de.chipf0rk.MuhPlots.listeners.PlayerJoinLeaveListener;
@@ -23,7 +25,10 @@ public final class MuhPlots extends JavaPlugin {
 	MessageSender msg;
 	PlotActions actions;
 	PlotHelpers helpers;
-	UUIDFetcher uuidFetcher;
+	
+	// Plugin instances
+	WorldGuardPlugin worldGuard;
+	WorldEditPlugin worldEdit;
 
 	// DB
 	Database db;
@@ -38,10 +43,7 @@ public final class MuhPlots extends JavaPlugin {
 
 	// Logging
 	void log(Level level, String msg) {
-		String fullMsg =
-				ChatColor.DARK_AQUA + "[" + getName() + "]" +
-				ChatColor.RESET + msg;
-		getLogger().log(level, fullMsg);
+		getLogger().log(level, msg);
 	}
 	void info(String msg) { log(Level.INFO, msg); }
 	void severe(String msg) { log(Level.SEVERE, msg); }
@@ -49,6 +51,13 @@ public final class MuhPlots extends JavaPlugin {
 
 	@Override
 	public void onEnable() {
+		// Save a copy of the default config.yml if one is not there
+		this.saveDefaultConfig();
+		
+		// Get plugin instances
+		this.worldGuard = WGBukkit.getPlugin();
+		this.worldEdit = (WorldEditPlugin) getServer().getPluginManager().getPlugin("WorldEdit");
+
 		// Init the database
 		db = new SQLite(getLogger(), 
 				"[" + getName() + "] ",
@@ -81,7 +90,6 @@ public final class MuhPlots extends JavaPlugin {
 			this.msg = new MessageSender(this);
 			this.actions = new PlotActions(this);
 			this.helpers = new PlotHelpers(this);
-			this.uuidFetcher = new UUIDFetcher();
 		} catch(MuhInitException e) {
 			severe("Initialisation exception: " + e.getMessage());
 			return;

@@ -2,8 +2,11 @@ package de.chipf0rk.MuhPlots;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 import org.bukkit.World;
 import org.bukkit.command.Command;
@@ -11,11 +14,13 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import com.evilmidget38.NameFetcher;
 import com.sk89q.worldguard.LocalPlayer;
 import com.sk89q.worldguard.bukkit.WGBukkit;
 import com.sk89q.worldguard.protection.managers.RegionManager;
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 
+import de.chipf0rk.Helpers;
 import de.chipf0rk.MuhPlots.MessageSender.State;
 
 public class MuhPlotsCommandExecutor implements CommandExecutor {
@@ -25,7 +30,7 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 	private PlotActions actions;
 
 	// This is a list of commands that operate on the plot where a player is standing
-	// We use this list to DRY-style determine if the commands can be executed given the players' position
+	// We use this list to determine if the commands can be executed given the players' position
 	private final List<String> cmdsOperatingOnCurrentPlot = Arrays.asList(
 		"protect",
 		"info",
@@ -59,6 +64,7 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 
 		// === Commands
 		Player player = (Player) sender;
+		LocalPlayer lp = plugin.worldGuard.wrapPlayer(player);
 		World world = player.getWorld();
 		RegionManager regionManager = WGBukkit.getRegionManager(world);
 		ProtectedRegion plot = helpers.getCurrentPlot(player);
@@ -104,13 +110,14 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 		switch(cmd) {
 		case "list": {
 			List<String> playersPlots = new ArrayList<String>();
+			
 			for(ProtectedRegion region : regionManager.getRegions().values()) {
-				if(region.isOwner((LocalPlayer) player)) {
+				if(region.isOwner(lp)) {
 					playersPlots.add("#" + helpers.getNumber(region.getId()));
 				}
 			}
 
-			if(playersPlots.size() > 0) msg.send(player, State.NOTICE, "You own the following plots: " + String.join(", ", playersPlots));
+			if(playersPlots.size() > 0) msg.send(player, State.NOTICE, "You own the following plots: " + Helpers.join(playersPlots, ", "));
 			else msg.send(player, State.NOTICE, "You don't own any plots in this world yet.");
 			
 			return true;
@@ -133,15 +140,25 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 		}
 
 		case "info": {
-			Set<String> owners = plot.getOwners().getPlayers();
-			Set<String> members = plot.getMembers().getPlayers();
+			Set<UUID> ownerUUIDs = plot.getOwners().getUniqueIds();
+			Set<UUID> memberUUIDs = plot.getMembers().getUniqueIds();
+			Collection<String> owners;
+			Collection<String> members;
+			try {
+				owners = NameFetcher.getNamesOf(new ArrayList<UUID>(ownerUUIDs)).values();
+				members = NameFetcher.getNamesOf(new ArrayList<UUID>(memberUUIDs)).values();
+			} catch (Exception e) {
+				plugin.severe(e.getMessage());
+				msg.send(player, State.FAILURE, "Sorry, an error occurred while fetching player names.");
+				return true;
+			}
 
 			msg.send(player, State.NOTICE, "Plot ID: " + plotId);
 			msg.send(player, State.NOTICE, owners.size() > 0 ?
-					"Owners: " + String.join(", ", owners) :
+					"Owners: " + Helpers.join(owners, ", ") :
 					"This plot has no owner.");
 			msg.send(player, State.NOTICE, members.size() > 0 ?
-					"Members: " + String.join(", ", members) :
+					"Members: " + Helpers.join(members, ", ") :
 					"This plot has no members.");
 			break;
 		}
@@ -208,6 +225,7 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 
 	private boolean checkPermission(Player player, String cmd) {
 		Permissions perm = Permissions.getByName(cmd);
+		// TODO change this to return true as soon as the basic functionality is there
 		if(perm != null) {
 			return player.hasPermission(perm.toString());
 		}

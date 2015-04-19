@@ -5,6 +5,7 @@ version: 0.0.1-SNAPSHOT
 depend:
   - WorldGuard
   - WorldEdit
+  - SQLibrary
 description: A plot manager that makes it possible for players and admins to protect and manage predefined WorldGuard plots in a simple way.
 commands:
   mp:
@@ -17,6 +18,9 @@ commands:
 permissions:
   mau5plots.protect:
     description: "Allows a player to protect an ownerless plot."
+    default: true
+  mau5plots.info:
+    description: "Allows a player to get information about the plot they're standing in."
     default: true
   mau5plots.clear:
     description: "Allows a player (most likely administrator) to clear an owned plot, as in, make it owner- and memberless."

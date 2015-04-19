@@ -1,6 +1,7 @@
 package de.chipf0rk.MuhPlots;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -12,6 +13,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
 import org.bukkit.entity.Player;
 
+import com.evilmidget38.UUIDFetcher;
 import com.sk89q.worldedit.BlockVector;
 import com.sk89q.worldedit.CuboidClipboard;
 import com.sk89q.worldedit.EditSession;
@@ -20,6 +22,7 @@ import com.sk89q.worldedit.LocalPlayer;
 import com.sk89q.worldedit.LocalWorld;
 import com.sk89q.worldedit.MaxChangedBlocksException;
 import com.sk89q.worldedit.Vector;
+import com.sk89q.worldedit.bukkit.BukkitWorld;
 import com.sk89q.worldguard.domains.DefaultDomain;
 import com.sk89q.worldguard.protection.flags.DefaultFlag;
 import com.sk89q.worldguard.protection.flags.StateFlag.State;
@@ -48,7 +51,12 @@ public class PlotActions {
 	public boolean protectPlot(ProtectedRegion plot, Player issuer, String playerName) {
 		plot.setFlag(DefaultFlag.BUILD, null);
 		
-		UUID playerUUID = plugin.uuidFetcher.getUUIDs(playerName).get(playerName);
+		UUID playerUUID;
+		try {
+			playerUUID = UUIDFetcher.getUUIDsOf(Arrays.asList(playerName)).get(playerName);
+		} catch (Exception e) {
+			plugin.severe(e.getMessage()); return false;
+		}
 		if(playerUUID == null) return false;
 		
 		DefaultDomain owners = new DefaultDomain();
@@ -81,12 +89,13 @@ public class PlotActions {
 
 	public boolean resetPlot(ProtectedRegion plot, Player player, CuboidClipboard plotSchematic) {
 		World world = player.getWorld();
+		LocalPlayer lp = plugin.worldEdit.wrapPlayer(player);
 		if(plotSchematic != null) {
 			try {
 				int maxBlocks = plotSize * plotSize * world.getMaxHeight();
 				Vector minPoint = plot.getMinimumPoint();
-
-				EditSession es = esf.getEditSession((LocalWorld) world, maxBlocks, (LocalPlayer) player);
+				
+				EditSession es = esf.getEditSession(new BukkitWorld(world), maxBlocks, lp);
 				plotSchematic.place(es, minPoint, false);
 				
 				resetPlotSigns(plot, world);

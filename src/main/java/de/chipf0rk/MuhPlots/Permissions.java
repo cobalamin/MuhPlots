@@ -4,7 +4,7 @@ import org.bukkit.entity.Player;
 
 // A enum "of strings" to store available permissions
 enum Permissions {
-	PROTECT, INFO, SETOWNER, CLEAR, FIND, FREE, UNLIMITED;
+	PROTECT, INFO, SETOWNER, CLEAR, RESET, DELETE, FIND, FREE, UNLIMITED;
 	
 	private String full_perm;
 

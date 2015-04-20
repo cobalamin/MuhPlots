@@ -3,10 +3,16 @@ package de.chipf0rk.MuhPlots;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.UUID;
+import java.util.logging.Level;
 
 import org.bukkit.World;
 import org.bukkit.command.Command;
@@ -15,8 +21,10 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import com.evilmidget38.NameFetcher;
+import com.evilmidget38.UUIDFetcher;
 import com.sk89q.worldguard.LocalPlayer;
 import com.sk89q.worldguard.bukkit.WGBukkit;
+import com.sk89q.worldguard.domains.DefaultDomain;
 import com.sk89q.worldguard.protection.managers.RegionManager;
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 
@@ -32,7 +40,8 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 	// This is a list of commands that operate on the plot where a player is standing
 	// We use this list to determine if the commands can be executed given the players' position
 	private final List<String> cmdsOperatingOnCurrentPlot = Arrays.asList(
-		"protect",
+		"protect", "setowner",
+		"add", "rem",
 		"info",
 		"clear", "reset", "delete"
 	);
@@ -109,15 +118,18 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 		// If we didn't do this, duplicate variable names in two different cases could cause trouble.
 		switch(cmd) {
 		case "list": {
-			List<String> playersPlots = new ArrayList<String>();
+			SortedSet<Integer> playersPlots = new TreeSet<Integer>(new Comparator<Integer>() {
+				@Override
+				public int compare(Integer i1, Integer i2) { return i1 - i2; }
+			});
 			
 			for(ProtectedRegion region : regionManager.getRegions().values()) {
 				if(region.isOwner(lp)) {
-					playersPlots.add("#" + helpers.getNumber(region.getId()));
+					playersPlots.add(helpers.getNumber(region.getId()));
 				}
 			}
 
-			if(playersPlots.size() > 0) msg.send(player, State.NOTICE, "You own the following plots: " + Helpers.join(playersPlots, ", "));
+			if(playersPlots.size() > 0) msg.send(player, State.NOTICE, "You own the following plots: " + Helpers.join(playersPlots, ", ", "#"));
 			else msg.send(player, State.NOTICE, "You don't own any plots in this world yet.");
 			
 			return true;
@@ -128,8 +140,15 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 				msg.send(player, State.FAILURE, "Sorry, you can't protect any more plots.");
 				return true;
 			}
-			if(plot.hasMembersOrOwners()) {
-				msg.send(player, State.FAILURE, "Sorry, this plot is already protected by someone.");
+			
+			DefaultDomain existingOwners = plot.getOwners();
+			if(existingOwners.size() > 0) {
+				if(existingOwners.contains(player.getUniqueId())) {
+					msg.send(player, State.NOTICE, "You already own this plot.");
+				}
+				else {
+					msg.send(player, State.FAILURE, "Sorry, this plot is already protected by someone.");
+				}
 				return true;
 			}
 
@@ -145,11 +164,11 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 			Collection<String> owners;
 			Collection<String> members;
 			try {
-				owners = NameFetcher.getNamesOf(new ArrayList<UUID>(ownerUUIDs)).values();
-				members = NameFetcher.getNamesOf(new ArrayList<UUID>(memberUUIDs)).values();
+				owners = NameFetcher.getNames(ownerUUIDs).values();
+				members = NameFetcher.getNames(memberUUIDs).values();
 			} catch (Exception e) {
-				plugin.severe(e.getMessage());
 				msg.send(player, State.FAILURE, "Sorry, an error occurred while fetching player names.");
+				plugin.severe(e.getMessage());
 				return true;
 			}
 
@@ -171,7 +190,7 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 
 		case "reset": {
 			boolean couldReset = actions.resetPlot(plot, player, plugin.plotSchematic);
-			if(couldReset) msg.send(player, State.SUCCESS, "You've successfully reset plot " + plotId + "!");
+			if(couldReset) msg.send(player, State.SUCCESS, "Reset plot " + plotId + "!");
 			else msg.send(player, State.FAILURE, "Sorry, couldn't reset the plot. Check the logs.");
 			break;
 		}
@@ -180,7 +199,7 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 			boolean couldReset = actions.resetPlot(plot, player, plugin.plotSchematic);
 			if(couldReset) {
 				actions.clearPlot(plot, player);
-				msg.send(player, State.SUCCESS, "You've successfully deleted plot " + plotId + "!");
+				msg.send(player, State.SUCCESS, "Deleted plot " + plotId + "!");
 			}
 			else msg.send(player, State.FAILURE, "Sorry, couldn't reset the plot. Check the logs.");
 			break;
@@ -197,6 +216,54 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 			if(couldSetOwner) msg.send(player, State.SUCCESS, "You've successfully protected plot " + plotId + " for " + playerName + "!");
 			else msg.send(player, State.FAILURE, "Something went wrong when trying to protect this plot. Double check the player name.");
 			return true;
+		}
+		
+		case "add": {
+			if(args.size() < 1) {
+				msg.send(player, State.FAILURE, "Please specify at least one player to add to this plot.");
+				return true;
+			}
+			try {
+				Collection<UUID> uuids = UUIDFetcher.getUUIDsOf(args).values();				
+				DefaultDomain members = plot.getMembers();
+				
+				if(uuids.size() < args.size()) {
+					msg.send(player, State.NOTICE, "Couldn't resolve all names to UUIDs. Please check the spelling.");
+				}
+				
+				for(UUID uuid : uuids) {
+					 members.addPlayer(uuid);
+				}
+				msg.send(player, State.SUCCESS, "Added " + uuids.size() + " player(s) to your plot.");
+			} catch (Exception e) {
+				msg.send(player, State.FAILURE, "An error occurred when resolving names to UUIDs.");
+				plugin.severe(e.getMessage());
+			}
+			break;
+		}
+		
+		case "rem": {
+			if(args.size() < 1) {
+				msg.send(player, State.FAILURE, "Please specify at least one player to remove from this plot.");
+				return true;
+			}
+			try {
+				Collection<UUID> uuids = UUIDFetcher.getUUIDsOf(args).values();
+				DefaultDomain members = plot.getMembers();
+				
+				if(uuids.size() < args.size()) {
+					msg.send(player, State.NOTICE, "Couldn't resolve all names to UUIDs. Please check the spelling.");
+				}
+				
+				for(UUID uuid : uuids) {
+					members.removePlayer(uuid);
+				}
+				msg.send(player, State.SUCCESS, "Removed " + uuids.size() + " player(s) from your plot.");
+			} catch (Exception e) {
+				msg.send(player, State.FAILURE, "An error occurred when resolving names to UUIDs.");
+				plugin.severe(e.getMessage());
+			}
+			break;
 		}
 		
 		case "tp": {
@@ -229,9 +296,7 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 		if(perm != null) {
 			return player.hasPermission(perm.toString());
 		}
-		else {
-			plugin.warn("No matching permission for command " + cmd + " found; returning false");
-			return false;
-		}
+
+		return true;
 	}
 }

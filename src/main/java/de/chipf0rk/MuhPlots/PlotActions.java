@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.logging.Level;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -111,6 +112,10 @@ public class PlotActions {
 	
 	public void teleportToPlot(ProtectedRegion plot, Player player) {
 		BlockVector minPoint = plot.getMinimumPoint();
+		
+		plugin.warn(plot.getId());
+		plugin.warn(minPoint.getX() + "|" + minPoint.getZ());
+		
 		Location safeLoc = new Location(player.getWorld(),
 			minPoint.getX() - 0.5D, this.walkwayY,
 			minPoint.getZ() - 0.5D);

@@ -7,7 +7,8 @@ public class MuhInitException extends Exception {
 	public MuhInitException(String msg) {
 		this.msg = msg;
 	}
-	
+
+	@Override
 	public String getMessage() {
 		return this.msg;
 	}

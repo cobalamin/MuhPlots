@@ -1,5 +1,6 @@
 package de.chipf0rk.MuhPlots;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -40,8 +41,8 @@ public class PlotActions {
 	public PlotActions(MuhPlots plugin) throws MuhInitException {
 		this.plugin = plugin;
 		this.esf = new EditSessionFactory();
-		this.plotSize = plugin.getConfig().getInt("plots.size");
-		this.walkwayY = plugin.getConfig().getInt("plots.walkway_y");
+		this.plotSize = plugin.plotSize;
+		this.walkwayY = plugin.walkwayY;
 		
 		if(plotSize < 1) throw new MuhInitException("Config value plots.size has to be set and an integer larger than 0!");
 		if(walkwayY < 0) throw new MuhInitException("Config value plots.walkway_y has to be set and a positive integer!");
@@ -49,14 +50,15 @@ public class PlotActions {
 
 	// Warning: the following actions are not checked for permissions at any time.
 	// Permission checking should be done by other classes using these methods.
-	public boolean protectPlot(ProtectedRegion plot, Player issuer, String playerName) {
+	public boolean setOwner(ProtectedRegion plot, Player issuer, String playerName) {
 		plot.setFlag(DefaultFlag.BUILD, null);
 		
 		UUID playerUUID;
 		try {
 			playerUUID = UUIDFetcher.getUUIDsOf(Arrays.asList(playerName)).get(playerName);
 		} catch (Exception e) {
-			plugin.severe(e.getMessage()); return false;
+			plugin.severe(e.getMessage());
+			return false;
 		}
 		if(playerUUID == null) return false;
 		
@@ -64,8 +66,12 @@ public class PlotActions {
 		owners.addPlayer(playerUUID);
 		plot.setOwners(owners);
 		
+		setPlotSigns(plot, issuer.getWorld(), playerName);
+		updatePlotInDb(plot, issuer.getWorld());
+		
 		return true;
 	}
+
 	public void protectPlot(ProtectedRegion plot, Player player) {
 		plot.setFlag(DefaultFlag.BUILD, null);
 
@@ -74,10 +80,11 @@ public class PlotActions {
 		plot.setOwners(owners);
 
 		setPlotSigns(plot, player);
+		updatePlotInDb(plot, player.getWorld());
 	}
 
 	public void clearPlot(ProtectedRegion plot, Player player) {
-		if(plugin.getConfig().getBoolean("plots.unprotected_are_public")) {
+		if(plugin.unprotectedPlotsArePublic) {
 			// allow building to anyone
 			plot.setFlag(DefaultFlag.BUILD, State.ALLOW);
 		}
@@ -86,6 +93,7 @@ public class PlotActions {
 		plot.setMembers(new DefaultDomain()); // sets the members to empty
 
 		resetPlotSigns(plot, player.getWorld());
+		updatePlotInDb(plot, player.getWorld());
 	}
 
 	public boolean resetPlot(ProtectedRegion plot, Player player, CuboidClipboard plotSchematic) {
@@ -112,9 +120,6 @@ public class PlotActions {
 	
 	public void teleportToPlot(ProtectedRegion plot, Player player) {
 		BlockVector minPoint = plot.getMinimumPoint();
-		
-		plugin.warn(plot.getId());
-		plugin.warn(minPoint.getX() + "|" + minPoint.getZ());
 		
 		Location safeLoc = new Location(player.getWorld(),
 			minPoint.getX() - 0.5D, this.walkwayY,
@@ -186,5 +191,14 @@ public class PlotActions {
 				minPoint.getBlockZ() + size));
 		
 		return blocks;
+	}
+	
+	private void updatePlotInDb(ProtectedRegion plot, World world) {
+		try {
+			plugin.dbm.updatePlot(plot, world);
+		} catch (SQLException e) {
+			plugin.severe("An SQLException occurred when updating plot information!");
+			e.printStackTrace();
+		}
 	}
 }

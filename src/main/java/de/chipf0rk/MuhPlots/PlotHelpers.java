@@ -23,7 +23,7 @@ public class PlotHelpers {
 	public PlotHelpers(MuhPlots plugin) throws MuhInitException {
 		this.plugin = plugin;
 		
-		this.plotPrefix = plugin.getConfig().getString("plots.prefix");
+		this.plotPrefix = plugin.plotPrefix;
 		// check if plot prefix is blank
 		if(StringUtils.isBlank(plotPrefix)) {
 			throw new MuhInitException("Invalid plot prefix in the configuration: " + plotPrefix);

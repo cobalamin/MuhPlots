@@ -5,11 +5,9 @@ import java.io.IOException;
 import java.util.List;
 import java.util.logging.Level;
 
-import lib.PatPeter.SQLibrary.Database;
-import lib.PatPeter.SQLibrary.SQLite;
-
 import org.bukkit.plugin.java.JavaPlugin;
 
+import com.sk89q.minecraft.util.commands.CommandException;
 import com.sk89q.worldedit.CuboidClipboard;
 import com.sk89q.worldedit.data.DataException;
 import com.sk89q.worldedit.bukkit.WorldEditPlugin;
@@ -18,7 +16,6 @@ import com.sk89q.worldguard.bukkit.WGBukkit;
 import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
 
 import de.chipf0rk.MuhPlots.exceptions.MuhInitException;
-import de.chipf0rk.MuhPlots.listeners.PlayerJoinLeaveListener;
 
 public final class MuhPlots extends JavaPlugin {
 	// Helper instances
@@ -31,8 +28,8 @@ public final class MuhPlots extends JavaPlugin {
 	WorldEditPlugin worldEdit;
 
 	// DB
-	Database db;
-	public Database getDB() { return this.db; }
+	DatabaseManager dbm;
+	public DatabaseManager getDatabaseManager() { return this.dbm; }
 	
 	// Plot schematic
 	File plotFile;
@@ -40,6 +37,11 @@ public final class MuhPlots extends JavaPlugin {
 	
 	// Information
 	List<String> plotWorlds;
+	int plotSize;
+	int plotRange;
+	String plotPrefix;
+	int walkwayY;
+	boolean unprotectedPlotsArePublic;
 
 	// Logging
 	void log(Level level, String msg) {
@@ -56,21 +58,20 @@ public final class MuhPlots extends JavaPlugin {
 		
 		// Get plugin instances
 		this.worldGuard = WGBukkit.getPlugin();
-		this.worldEdit = (WorldEditPlugin) getServer().getPluginManager().getPlugin("WorldEdit");
-
-		// Init the database
-		db = new SQLite(getLogger(), 
-				"[" + getName() + "] ",
-				this.getDataFolder().getAbsolutePath(),
-				getName(),
-				".sqlite");
-		if(!db.open()) {
-			severe("Could not open a connection to the database! Plugin initialisation failed.");
+		try {
+			this.worldEdit = WGBukkit.getPlugin().getWorldEdit();
+		} catch (CommandException e1) {
+			severe("WorldEdit is not available; can't initialise MuhPlots");
 			return;
 		}
 		
-		// Load list of plot worlds from the config
+		// Load plot configuration values
 		this.plotWorlds = getConfig().getStringList("plotworlds");
+		this.plotRange = getConfig().getInt("plots.range");
+		this.plotPrefix = getConfig().getString("plots.prefix");
+		this.plotSize = getConfig().getInt("plots.size");
+		this.unprotectedPlotsArePublic = getConfig().getBoolean("plots.unprotected_are_public");
+		this.walkwayY = getConfig().getInt("plots.walkway_y");
 		
 		// Try loading the plot schematic file
 		plotFile = new File(getDataFolder(), "plot.schematic");
@@ -87,6 +88,7 @@ public final class MuhPlots extends JavaPlugin {
 		
 		// Create helper instances
 		try {
+			this.dbm = new DatabaseManager(this);
 			this.msg = new MessageSender(this);
 			this.actions = new PlotActions(this);
 			this.helpers = new PlotHelpers(this);
@@ -110,6 +112,9 @@ public final class MuhPlots extends JavaPlugin {
 
 	@Override
 	public void onDisable() {
+		// Close DB connection
+		this.dbm.close();
+		
 		info(getFullName() + " has been disabled.");
 	}
 	

@@ -1,18 +1,17 @@
 package de.chipf0rk.MuhPlots;
 
-import java.util.ArrayList;
+import java.sql.SQLException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.Iterator;
+import java.util.Date;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.UUID;
-import java.util.logging.Level;
 
 import org.bukkit.World;
 import org.bukkit.command.Command;
@@ -36,6 +35,8 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 	private MessageSender msg;
 	private PlotHelpers helpers;
 	private PlotActions actions;
+	
+	private DateFormat dateFormat = new SimpleDateFormat("dd MMM yyyy HH:mm");
 
 	// This is a list of commands that operate on the plot where a player is standing
 	// We use this list to determine if the commands can be executed given the players' position
@@ -51,12 +52,6 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 		this.msg = plugin.msg;
 		this.actions = plugin.actions;
 		this.helpers = plugin.helpers;
-	}
-
-	// See discussion at https://github.com/Bukkit/Bukkit/commit/4bc86be459a7ce310f523ca03e2908c1d29956f4
-	@SuppressWarnings("deprecation")
-	Player getPlayerByName(Player issuer, String name) {
-		return issuer.getServer().getPlayer(name);
 	}
 
 	public boolean onCommand(CommandSender sender, Command c, String label, String[] arguments) {
@@ -171,11 +166,26 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 				plugin.severe(e.getMessage());
 				return true;
 			}
+			
+			Date ownerLastSeen = null;
+			try {
+				ownerLastSeen = plugin.dbm.getPlayerLastSeen(ownerUUIDs.iterator().next());
+			} catch (SQLException e) {
+				plugin.severe("SQLException occurred when trying to fetch last seen data for a plot owner!");
+				e.printStackTrace();
+			}
+			String ownerLastSeenString = ownerLastSeen != null ?
+				dateFormat.format(ownerLastSeen) :
+				"Never";
 
 			msg.send(player, State.NOTICE, "Plot ID: " + plotId);
-			msg.send(player, State.NOTICE, owners.size() > 0 ?
-					"Owners: " + Helpers.join(owners, ", ") :
-					"This plot has no owner.");
+			if(owners.size() > 0) {
+				msg.send(player, State.NOTICE, "Owners: " + Helpers.join(owners, ", "));
+				msg.send(player, State.NOTICE, "Owner last seen: " + ownerLastSeenString);
+			}
+			else {
+				msg.send(player, State.NOTICE, "This plot has no owner.");
+			}
 			msg.send(player, State.NOTICE, members.size() > 0 ?
 					"Members: " + Helpers.join(members, ", ") :
 					"This plot has no members.");
@@ -211,7 +221,7 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 				return true;
 			}
 			String playerName = args.get(0);
-			boolean couldSetOwner = actions.protectPlot(plot, player, playerName);
+			boolean couldSetOwner = actions.setOwner(plot, player, playerName);
 			
 			if(couldSetOwner) msg.send(player, State.SUCCESS, "You've successfully protected plot " + plotId + " for " + playerName + "!");
 			else msg.send(player, State.FAILURE, "Something went wrong when trying to protect this plot. Double check the player name.");
@@ -282,6 +292,34 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 				msg.send(player, State.SUCCESS, "You've been teleported.");
 			}
 			break;
+		}
+		
+		case "find": {
+			String freePlotId = null;
+			try {
+				freePlotId = plugin.dbm.getFreePlotId(world);
+			} catch (SQLException e) {
+				msg.send(player, State.FAILURE, "An exception occurred; could not find a free plot for you :(");
+				e.printStackTrace();
+				return true;
+			}
+			
+			if(freePlotId != null) {
+				ProtectedRegion freePlot = regionManager.getRegion(freePlotId);
+				String plotNumber = "#" + helpers.getNumber(freePlotId);
+				if(freePlot != null) {
+					msg.send(player, State.SUCCESS, "Free plot found: " + plotNumber);
+					actions.teleportToPlot(freePlot, player);
+				}
+				else {
+					msg.send(player, State.FAILURE, "Found free plot " + plotNumber + " in the database, but it doesn't exist");
+				}
+			}
+			else {
+				msg.send(player, State.FAILURE, "Could not find any free plots!");
+			}
+
+			return true;
 		}
 
 		default: msg.send(player, State.FAILURE, "Unknown command. Use /mp help to get a list of all commands.");

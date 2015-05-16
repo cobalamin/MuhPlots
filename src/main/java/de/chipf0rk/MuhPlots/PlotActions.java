@@ -1,11 +1,9 @@
 package de.chipf0rk.MuhPlots;
 
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
-import java.util.logging.Level;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -21,7 +19,6 @@ import com.sk89q.worldedit.CuboidClipboard;
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.EditSessionFactory;
 import com.sk89q.worldedit.LocalPlayer;
-import com.sk89q.worldedit.LocalWorld;
 import com.sk89q.worldedit.MaxChangedBlocksException;
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.bukkit.BukkitWorld;
@@ -30,22 +27,14 @@ import com.sk89q.worldguard.protection.flags.DefaultFlag;
 import com.sk89q.worldguard.protection.flags.StateFlag.State;
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 
-import de.chipf0rk.MuhPlots.exceptions.MuhInitException;
-
+@SuppressWarnings("deprecation")
 public class PlotActions {
 	private MuhPlots plugin;
 	private EditSessionFactory esf;
-	private int plotSize;
-	private int walkwayY;
 
-	public PlotActions(MuhPlots plugin) throws MuhInitException {
+	public PlotActions(MuhPlots plugin) {
 		this.plugin = plugin;
 		this.esf = new EditSessionFactory();
-		this.plotSize = plugin.plotSize;
-		this.walkwayY = plugin.walkwayY;
-		
-		if(plotSize < 1) throw new MuhInitException("Config value plots.size has to be set and an integer larger than 0!");
-		if(walkwayY < 0) throw new MuhInitException("Config value plots.walkway_y has to be set and a positive integer!");
 	}
 
 	// Warning: the following actions are not checked for permissions at any time.
@@ -67,7 +56,6 @@ public class PlotActions {
 		plot.setOwners(owners);
 		
 		setPlotSigns(plot, issuer.getWorld(), playerName);
-		updatePlotInDb(plot, issuer.getWorld());
 		
 		return true;
 	}
@@ -80,11 +68,10 @@ public class PlotActions {
 		plot.setOwners(owners);
 
 		setPlotSigns(plot, player);
-		updatePlotInDb(plot, player.getWorld());
 	}
 
-	public void clearPlot(ProtectedRegion plot, Player player) {
-		if(plugin.unprotectedPlotsArePublic) {
+	public void clearPlot(ProtectedRegion plot, PlotWorld pw, Player player) {
+		if(pw.unprotectedPlotsArePublic) {
 			// allow building to anyone
 			plot.setFlag(DefaultFlag.BUILD, State.ALLOW);
 		}
@@ -93,14 +80,15 @@ public class PlotActions {
 		plot.setMembers(new DefaultDomain()); // sets the members to empty
 
 		resetPlotSigns(plot, player.getWorld());
-		updatePlotInDb(plot, player.getWorld());
 	}
 
 	public boolean resetPlot(ProtectedRegion plot, Player player, CuboidClipboard plotSchematic) {
 		World world = player.getWorld();
+		PlotWorld pw = PlotWorld.getPlotWorld(world);
 		LocalPlayer lp = plugin.worldEdit.wrapPlayer(player);
 		if(plotSchematic != null) {
 			try {
+				int plotSize = pw.plotSize;
 				int maxBlocks = plotSize * plotSize * world.getMaxHeight();
 				Vector minPoint = plot.getMinimumPoint();
 				
@@ -120,9 +108,11 @@ public class PlotActions {
 	
 	public void teleportToPlot(ProtectedRegion plot, Player player) {
 		BlockVector minPoint = plot.getMinimumPoint();
+		World world = player.getWorld();
+		PlotWorld pw = PlotWorld.getPlotWorld(world);
 		
-		Location safeLoc = new Location(player.getWorld(),
-			minPoint.getX() - 0.5D, this.walkwayY,
+		Location safeLoc = new Location(world,
+			minPoint.getX() - 0.5D, pw.walkwayY,
 			minPoint.getZ() - 0.5D);
 
 		player.teleport(safeLoc);
@@ -148,13 +138,14 @@ public class PlotActions {
 
 	private void setPlotSigns(ProtectedRegion plot, World world, String ownerName) {
 		List<Block> signs = getSignBlocksOfPlot(plot, world);
+		PlotWorld pw = PlotWorld.getPlotWorld(world);
 		
 		for (Block sign : signs) {
 			Material type = sign.getType();
 			if (type == Material.SIGN || type == Material.SIGN_POST) {
 				Sign currentSign = (Sign) sign.getState();
 				currentSign.setLine(0, "---------------");
-				currentSign.setLine(1, "Plot ID: " + ChatColor.BLUE + plugin.helpers.getNumber(plot.getId()));
+				currentSign.setLine(1, "Plot ID: " + ChatColor.BLUE + pw.getShortPlotId(plot.getId()));
 				currentSign.setLine(2, ChatColor.WHITE + ownerName);
 				currentSign.setLine(3, "---------------");
 				currentSign.update();
@@ -166,12 +157,14 @@ public class PlotActions {
 	}
 	
 	private List<Block> getSignBlocksOfPlot(ProtectedRegion plot, World world) {
+		PlotWorld pw = PlotWorld.getPlotWorld(world);
 		BlockVector min = plot.getMinimumPoint();
 		Location minPoint = new Location(world,
 				min.getBlockX() - 1.0, 0.0, min.getBlockZ() - 1.0);
 		List<Block> blocks = new ArrayList<Block>(4);
 		
 		int size = plugin.getConfig().getInt("plots.size") + 1; // signs are 1 block outside of the plot
+		int walkwayY = pw.walkwayY;
 
 		blocks.add(world.getBlockAt(
 				minPoint.getBlockX(),
@@ -191,14 +184,5 @@ public class PlotActions {
 				minPoint.getBlockZ() + size));
 		
 		return blocks;
-	}
-	
-	private void updatePlotInDb(ProtectedRegion plot, World world) {
-		try {
-			plugin.dbm.updatePlot(plot, world);
-		} catch (SQLException e) {
-			plugin.severe("An SQLException occurred when updating plot information!");
-			e.printStackTrace();
-		}
 	}
 }

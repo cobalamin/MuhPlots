@@ -2,9 +2,10 @@ package de.chipf0rk.MuhPlots;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
 import java.util.logging.Level;
 
+import org.bukkit.World;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import com.sk89q.minecraft.util.commands.CommandException;
@@ -15,13 +16,14 @@ import com.sk89q.worldedit.schematic.SchematicFormat;
 import com.sk89q.worldguard.bukkit.WGBukkit;
 import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
 
+import de.chipf0rk.Helpers;
 import de.chipf0rk.MuhPlots.exceptions.MuhInitException;
 
+@SuppressWarnings("deprecation")
 public final class MuhPlots extends JavaPlugin {
 	// Helper instances
 	MessageSender msg;
 	PlotActions actions;
-	PlotHelpers helpers;
 	
 	// Plugin instances
 	WorldGuardPlugin worldGuard;
@@ -34,14 +36,6 @@ public final class MuhPlots extends JavaPlugin {
 	// Plot schematic
 	File plotFile;
 	CuboidClipboard plotSchematic;
-	
-	// Information
-	List<String> plotWorlds;
-	int plotSize;
-	int plotRange;
-	String plotPrefix;
-	int walkwayY;
-	boolean unprotectedPlotsArePublic;
 
 	// Logging
 	void log(Level level, String msg) {
@@ -53,7 +47,7 @@ public final class MuhPlots extends JavaPlugin {
 
 	@Override
 	public void onEnable() {
-		// Save a copy of the default config.yml if one is not there
+		// Save a copy of the default config.yml
 		this.saveDefaultConfig();
 		
 		// Get plugin instances
@@ -66,12 +60,28 @@ public final class MuhPlots extends JavaPlugin {
 		}
 		
 		// Load plot configuration values
-		this.plotWorlds = getConfig().getStringList("plotworlds");
-		this.plotRange = getConfig().getInt("plots.range");
-		this.plotPrefix = getConfig().getString("plots.prefix");
-		this.plotSize = getConfig().getInt("plots.size");
-		this.unprotectedPlotsArePublic = getConfig().getBoolean("plots.unprotected_are_public");
-		this.walkwayY = getConfig().getInt("plots.walkway_y");
+		ConfigurationSection worldsCfg = this.getConfig().getConfigurationSection("plotworlds");
+		
+		info(Helpers.join(worldsCfg.getKeys(false), ", "));
+
+		for(String worldName : worldsCfg.getKeys(false)) {
+			ConfigurationSection worldCfg = worldsCfg.getConfigurationSection(worldName);
+			World w = getServer().getWorld(worldName);
+			
+			int plotSize = worldCfg.getInt("size");
+			String plotPrefix = worldCfg.getString("prefix");
+			int walkwayY = worldCfg.getInt("walkway_y");
+			int maxPerPlayer = worldCfg.getInt("max_per_player");
+			boolean unprotectedPlotsArePublic = worldCfg.getBoolean("unprotected_are_public");
+			
+			try {
+				new PlotWorld(w, plotSize, walkwayY, plotPrefix, maxPerPlayer, unprotectedPlotsArePublic);
+				info("Initialised plot world " + w.getName());
+			} catch (MuhInitException e) {
+				severe("Could not initialize plot world " + w.getName() + " - world will not be managed by MuhPlots!");
+				severe(e.getMessage());
+			}
+		}
 		
 		// Try loading the plot schematic file
 		plotFile = new File(getDataFolder(), "plot.schematic");
@@ -91,7 +101,6 @@ public final class MuhPlots extends JavaPlugin {
 			this.dbm = new DatabaseManager(this);
 			this.msg = new MessageSender(this);
 			this.actions = new PlotActions(this);
-			this.helpers = new PlotHelpers(this);
 		} catch(MuhInitException e) {
 			severe("Initialisation exception: " + e.getMessage());
 			return;

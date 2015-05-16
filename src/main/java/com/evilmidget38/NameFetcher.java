@@ -41,7 +41,7 @@ public abstract class NameFetcher implements Callable<Map<UUID, String>> {
 		}
 
 		nameCache.put(uuid, name);
-			
+
 		return name;
 	}
 }

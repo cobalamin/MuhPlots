@@ -5,7 +5,6 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -33,7 +32,6 @@ import de.chipf0rk.MuhPlots.MessageSender.State;
 public class MuhPlotsCommandExecutor implements CommandExecutor {
 	private MuhPlots plugin;
 	private MessageSender msg;
-	private PlotHelpers helpers;
 	private PlotActions actions;
 	
 	private DateFormat dateFormat = new SimpleDateFormat("dd MMM yyyy HH:mm");
@@ -51,7 +49,6 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 		this.plugin = plugin;
 		this.msg = plugin.msg;
 		this.actions = plugin.actions;
-		this.helpers = plugin.helpers;
 	}
 
 	public boolean onCommand(CommandSender sender, Command c, String label, String[] arguments) {
@@ -70,8 +67,9 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 		Player player = (Player) sender;
 		LocalPlayer lp = plugin.worldGuard.wrapPlayer(player);
 		World world = player.getWorld();
+		PlotWorld plotWorld = PlotWorld.getPlotWorld(world);
 		RegionManager regionManager = WGBukkit.getRegionManager(world);
-		ProtectedRegion plot = helpers.getCurrentPlot(player);
+		ProtectedRegion plot = PlotWorld.getCurrentPlot(player);
 		String plotId = "<unknown>";
 
 		String cmd = arguments[0].toLowerCase();
@@ -83,7 +81,7 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 			return true;
 		}
 		// then check if the world is a plot world, as set in the plugin configuration
-		if(!plugin.plotWorlds.contains(world.getName())) {
+		if(!PlotWorld.isPlotWorld(world)) {
 			msg.send(player, State.FAILURE, "The world you're in is not a plot world.");
 			return true;
 		}
@@ -100,12 +98,12 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 				msg.send(player, State.FAILURE, "There's no plot where you're standing.");
 				return true;
 			}
-			if(!helpers.isPlot(plot)) {
+			if(!plotWorld.isPlot(plot)) {
 				msg.send(player,State.FAILURE, "The region you're in doesn't seem to be a plot region.");
 				return true;
 			}
 
-			plotId = "#" + helpers.getNumber(plot.getId());
+			plotId = "#" + plotWorld.getShortPlotId(plot.getId());
 		}
 
 		// Execute the commands!
@@ -113,14 +111,11 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 		// If we didn't do this, duplicate variable names in two different cases could cause trouble.
 		switch(cmd) {
 		case "list": {
-			SortedSet<Integer> playersPlots = new TreeSet<Integer>(new Comparator<Integer>() {
-				@Override
-				public int compare(Integer i1, Integer i2) { return i1 - i2; }
-			});
+			SortedSet<String> playersPlots = new TreeSet<String>();
 			
 			for(ProtectedRegion region : regionManager.getRegions().values()) {
 				if(region.isOwner(lp)) {
-					playersPlots.add(helpers.getNumber(region.getId()));
+					playersPlots.add(plotWorld.getShortPlotId(region.getId()));
 				}
 			}
 
@@ -131,7 +126,7 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 		}
 
 		case "protect": {
-			if(!helpers.canProtectPlot(player)) {
+			if(!plotWorld.canProtectPlot(player)) {
 				msg.send(player, State.FAILURE, "Sorry, you can't protect any more plots.");
 				return true;
 			}
@@ -148,7 +143,7 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 			}
 
 			actions.protectPlot(plot, player);
-			msg.send(player, State.SUCCESS, "You've successfully protected plot #" + helpers.getNumber(plot.getId()) + "!");
+			msg.send(player, State.SUCCESS, "You've successfully protected plot #" + plotWorld.getShortPlotId(plot.getId()) + "!");
 			
 			break;
 		}
@@ -193,7 +188,7 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 		}
 
 		case "clear": {
-			actions.clearPlot(plot, player);
+			actions.clearPlot(plot, plotWorld, player);
 			msg.send(player, State.SUCCESS, "You've successfully cleared plot " + plotId + "!");
 			break;
 		}
@@ -208,7 +203,7 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 		case "delete": {
 			boolean couldReset = actions.resetPlot(plot, player, plugin.plotSchematic);
 			if(couldReset) {
-				actions.clearPlot(plot, player);
+				actions.clearPlot(plot, plotWorld, player);
 				msg.send(player, State.SUCCESS, "Deleted plot " + plotId + "!");
 			}
 			else msg.send(player, State.FAILURE, "Sorry, couldn't reset the plot. Check the logs.");
@@ -281,9 +276,8 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 				msg.send(player, State.FAILURE, "Please specify a plot to teleport to.");
 				return true;
 			}
-			// parse for number, then return full id string
 			String id = args.get(0);
-			String tpPlotId = helpers.getId(helpers.getNumber(id));
+			String tpPlotId = plotWorld.getFullPlotId(id);
 			ProtectedRegion tpPlot = regionManager.getRegion(tpPlotId);
 			
 			if(tpPlot == null) msg.send(player, State.FAILURE, "Couldn't find a plot with ID " + id);
@@ -295,25 +289,12 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 		}
 		
 		case "find": {
-			String freePlotId = null;
-			try {
-				freePlotId = plugin.dbm.getFreePlotId(world);
-			} catch (SQLException e) {
-				msg.send(player, State.FAILURE, "An exception occurred; could not find a free plot for you :(");
-				e.printStackTrace();
-				return true;
-			}
+			ProtectedRegion freePlot = plotWorld.getFreePlot();
 			
-			if(freePlotId != null) {
-				ProtectedRegion freePlot = regionManager.getRegion(freePlotId);
-				String plotNumber = "#" + helpers.getNumber(freePlotId);
-				if(freePlot != null) {
-					msg.send(player, State.SUCCESS, "Free plot found: " + plotNumber);
-					actions.teleportToPlot(freePlot, player);
-				}
-				else {
-					msg.send(player, State.FAILURE, "Found free plot " + plotNumber + " in the database, but it doesn't exist");
-				}
+			if(freePlot != null) {
+				String freePlotId = "#" + plotWorld.getShortPlotId(freePlot.getId());
+				msg.send(player, State.SUCCESS, "Free plot found: " + freePlotId);
+				actions.teleportToPlot(freePlot, player);
 			}
 			else {
 				msg.send(player, State.FAILURE, "Could not find any free plots!");
@@ -330,11 +311,10 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 
 	private boolean checkPermission(Player player, String cmd) {
 		Permissions perm = Permissions.getByName(cmd);
-		// TODO change this to return true as soon as the basic functionality is there
 		if(perm != null) {
 			return player.hasPermission(perm.toString());
 		}
-
-		return true;
+		// TODO change this to return true as soon as the basic functionality is there
+		else { return true; }
 	}
 }

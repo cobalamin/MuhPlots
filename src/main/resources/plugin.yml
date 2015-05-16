@@ -1,7 +1,7 @@
 ---
 name: MuhPlots
 main: de.chipf0rk.MuhPlots.MuhPlots
-version: 0.0.1-SNAPSHOT
+version: 0.0.2-SNAPSHOT
 depend:
   - WorldGuard
   - WorldEdit
@@ -44,13 +44,11 @@ permissions:
     description: "Gives all mau5plots permissions"
     children:
       mau5plots.protect: true
+      mau5plots.info: true
       mau5plots.clear: true
       mau5plots.reset: true
       mau5plots.delete: true
       mau5plots.find: true
-      mau5plots.free: true
       mau5plots.unlimited: true
       mau5plots.setowner: true
-      mau5plots.request: true
-      mau5plots.accept: true
     default: false

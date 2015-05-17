@@ -3,12 +3,6 @@
 # all worlds in which muhplots will be active
 plotworlds:
   plotworld:
-    # the x/z size of the plot
-    size: 50
-    # the height of the walkway between the plots
-    walkway_y: 10
-    # the region name prefix of the plots
-    prefix: muhplot_
     # the maximum number of plots a player can own without the .unlimited permission
     max_per_player: 1
     # if a plot is unowned, should everyone be able to build on it?

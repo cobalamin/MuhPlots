@@ -68,14 +68,11 @@ public final class MuhPlots extends JavaPlugin {
 			ConfigurationSection worldCfg = worldsCfg.getConfigurationSection(worldName);
 			World w = getServer().getWorld(worldName);
 			
-			int plotSize = worldCfg.getInt("size");
-			String plotPrefix = worldCfg.getString("prefix");
-			int walkwayY = worldCfg.getInt("walkway_y");
 			int maxPerPlayer = worldCfg.getInt("max_per_player");
 			boolean unprotectedPlotsArePublic = worldCfg.getBoolean("unprotected_are_public");
 			
 			try {
-				new PlotWorld(w, plotSize, walkwayY, plotPrefix, maxPerPlayer, unprotectedPlotsArePublic);
+				new PlotWorld(w, maxPerPlayer, unprotectedPlotsArePublic);
 				info("Initialised plot world " + w.getName());
 			} catch (MuhInitException e) {
 				severe("Could not initialize plot world " + w.getName() + " - world will not be managed by MuhPlots!");

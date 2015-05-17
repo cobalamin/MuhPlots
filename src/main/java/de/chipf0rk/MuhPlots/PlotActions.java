@@ -20,7 +20,6 @@ import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.EditSessionFactory;
 import com.sk89q.worldedit.LocalPlayer;
 import com.sk89q.worldedit.MaxChangedBlocksException;
-import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.bukkit.BukkitWorld;
 import com.sk89q.worldguard.domains.DefaultDomain;
 import com.sk89q.worldguard.protection.flags.DefaultFlag;
@@ -84,13 +83,14 @@ public class PlotActions {
 
 	public boolean resetPlot(ProtectedRegion plot, Player player, CuboidClipboard plotSchematic) {
 		World world = player.getWorld();
-		PlotWorld pw = PlotWorld.getPlotWorld(world);
 		LocalPlayer lp = plugin.worldEdit.wrapPlayer(player);
 		if(plotSchematic != null) {
 			try {
-				int plotSize = pw.plotSize;
-				int maxBlocks = plotSize * plotSize * world.getMaxHeight();
-				Vector minPoint = plot.getMinimumPoint();
+				BlockVector minPoint = plot.getMinimumPoint();
+				BlockVector maxPoint = plot.getMaximumPoint();
+				int xSize = (maxPoint.getBlockX() - minPoint.getBlockX()) + 1;
+				int zSize = (maxPoint.getBlockZ() - minPoint.getBlockZ()) + 1;
+				int maxBlocks = xSize * zSize * world.getMaxHeight();
 				
 				EditSession es = esf.getEditSession(new BukkitWorld(world), maxBlocks, lp);
 				plotSchematic.place(es, minPoint, false);
@@ -109,11 +109,15 @@ public class PlotActions {
 	public void teleportToPlot(ProtectedRegion plot, Player player) {
 		BlockVector minPoint = plot.getMinimumPoint();
 		World world = player.getWorld();
-		PlotWorld pw = PlotWorld.getPlotWorld(world);
 		
+		int x = minPoint.getBlockX();
+		int z = minPoint.getBlockZ();
 		Location safeLoc = new Location(world,
-			minPoint.getX() - 0.5D, pw.walkwayY,
-			minPoint.getZ() - 0.5D);
+			(double)x - 0.5D,
+			findFirstFreeBlock(world, x, z, true),
+			(double)z - 0.5D);
+		
+		plugin.info(safeLoc.toString());
 
 		player.teleport(safeLoc);
 	}
@@ -125,7 +129,7 @@ public class PlotActions {
 
 		for (Block sign : signs) {
 			Material type = sign.getType();
-			if (type == Material.SIGN || type == Material.SIGN_POST) {
+			if (isSign(type)) {
 				Sign currentSign = (Sign) sign.getState();
 				currentSign.setLine(0, "---------------");
 				currentSign.setLine(1, "Plot ID");
@@ -142,10 +146,10 @@ public class PlotActions {
 		
 		for (Block sign : signs) {
 			Material type = sign.getType();
-			if (type == Material.SIGN || type == Material.SIGN_POST) {
+			if (isSign(type)) {
 				Sign currentSign = (Sign) sign.getState();
 				currentSign.setLine(0, "---------------");
-				currentSign.setLine(1, "Plot ID: " + ChatColor.BLUE + pw.getShortPlotId(plot.getId()));
+				currentSign.setLine(1, "Plot " + ChatColor.BLUE + pw.getShortPlotId(plot.getId()));
 				currentSign.setLine(2, ChatColor.WHITE + ownerName);
 				currentSign.setLine(3, "---------------");
 				currentSign.update();
@@ -157,32 +161,50 @@ public class PlotActions {
 	}
 	
 	private List<Block> getSignBlocksOfPlot(ProtectedRegion plot, World world) {
-		PlotWorld pw = PlotWorld.getPlotWorld(world);
 		BlockVector min = plot.getMinimumPoint();
-		Location minPoint = new Location(world,
-				min.getBlockX() - 1.0, 0.0, min.getBlockZ() - 1.0);
+		BlockVector max = plot.getMaximumPoint();
+
+		int minX = min.getBlockX() - 1;
+		int minZ = min.getBlockZ() - 1;
+		int maxX = max.getBlockX() + 1;
+		int maxZ = max.getBlockZ() + 1;
+		int walkwayY = findFirstFreeBlock(world, minX, minZ, true);
+
 		List<Block> blocks = new ArrayList<Block>(4);
-		
-		int size = plugin.getConfig().getInt("plots.size") + 1; // signs are 1 block outside of the plot
-		int walkwayY = pw.walkwayY;
+		if(walkwayY < 0) { return blocks; } // early exit without any blocks if no free air block was found
 
 		blocks.add(world.getBlockAt(
-				minPoint.getBlockX(),
+				minX,
 				walkwayY,
-				minPoint.getBlockZ()));
+				minZ));
 		blocks.add(world.getBlockAt(
-				minPoint.getBlockX() + size,
+				maxX,
 				walkwayY,
-				minPoint.getBlockZ()));
+				minZ));
 		blocks.add(world.getBlockAt(
-				minPoint.getBlockX(),
+				minX,
 				walkwayY,
-				minPoint.getBlockZ() + size));
+				maxZ));
 		blocks.add(world.getBlockAt(
-				minPoint.getBlockX() + size,
+				maxX,
 				walkwayY,
-				minPoint.getBlockZ() + size));
+				maxZ));
 		
 		return blocks;
+	}
+	
+	private int findFirstFreeBlock(World world, int x, int z, boolean includeSigns) {
+		for(int y = 0; y < world.getMaxHeight(); y++) {
+			Material blockType = world.getBlockAt(x, y, z).getType();
+
+			if(blockType == Material.AIR
+					|| includeSigns && isSign(blockType)) { return y; }
+		}
+		
+		return -1;
+	}
+	
+	private boolean isSign(Material m) {
+		return m == Material.SIGN_POST || m == Material.WALL_SIGN;
 	}
 }

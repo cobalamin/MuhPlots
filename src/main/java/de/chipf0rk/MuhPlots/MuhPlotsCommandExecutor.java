@@ -161,20 +161,20 @@ public class MuhPlotsCommandExecutor implements CommandExecutor {
 				plugin.severe(e.getMessage());
 				return true;
 			}
-			
-			Date ownerLastSeen = null;
-			try {
-				ownerLastSeen = plugin.dbm.getPlayerLastSeen(ownerUUIDs.iterator().next());
-			} catch (SQLException e) {
-				plugin.severe("SQLException occurred when trying to fetch last seen data for a plot owner!");
-				e.printStackTrace();
-			}
-			String ownerLastSeenString = ownerLastSeen != null ?
-				dateFormat.format(ownerLastSeen) :
-				"Never";
 
 			msg.send(player, State.NOTICE, "Plot ID: " + plotId);
 			if(owners.size() > 0) {
+				Date ownerLastSeen = null;
+				try {
+					ownerLastSeen = plugin.dbm.getPlayerLastSeen(ownerUUIDs.iterator().next());
+				} catch (SQLException e) {
+					plugin.severe("SQLException occurred when trying to fetch last seen data for a plot owner!");
+					e.printStackTrace();
+				}
+				String ownerLastSeenString = ownerLastSeen != null ?
+					dateFormat.format(ownerLastSeen) :
+					"Never";
+				
 				msg.send(player, State.NOTICE, "Owners: " + Helpers.join(owners, ", "));
 				msg.send(player, State.NOTICE, "Owner last seen: " + ownerLastSeenString);
 			}
